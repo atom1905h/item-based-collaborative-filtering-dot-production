@@ -1,5 +1,5 @@
 import pandas as pd
-
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 def item_rating(df):
     movie_rating = df.pivot_table(values='rating', index='movieId', columns='userId')
@@ -39,3 +39,37 @@ def item_rating_tag_or_not(df):
     movie_rating_tag_or_not = df.pivot_table(values='interaction', index='movieId', columns='userId', fill_value=1)
 
     return movie_rating_tag_or_not
+
+def item_tags_count(df): # 결측치 있음
+    df['combined'] = (df['tag'].fillna('') + df['genres'].fillna('')).astype(str)
+    df['tag_count'] = df['combined'].apply(lambda x: len(x.split('|')))
+    movie_tag_count = df.pivot_table(values='tag_count', index='movieId', columns='userId')
+
+    return movie_tag_count
+
+def item_tf_idf_sum(df): # 결측치 있음
+    df['combined'] = (df['tag'].fillna('') + df['genres'].fillna('')).astype(str)
+    vectorizer = TfidfVectorizer(tokenizer=lambda x: x.split('|'))
+    tfidf_matrix = vectorizer.fit_transform(df['combined'])
+    df['tf-idf'] = tfidf_matrix.sum(axis=1)
+    movie_tf_idf = df.pivot_table(values='tf-idf', index='movieId', columns='userId')
+
+    return movie_tf_idf
+
+# def item_tf_idf_ratings(df, ratings):#(9717, 9717) 
+#     unique_movieids = ratings['movieId'].unique()
+#     df['combined'] = (df['tag'].fillna('') + df['genres'].fillna('')).astype(str)
+#     filtered_df = df[df['movieId'].isin(unique_movieids)]
+#     filtered_df = filtered_df.groupby('movieId')['combined'].apply(lambda x: '|'.join(set(x))).reset_index(name='combined_m')
+#     vectorizer = TfidfVectorizer(tokenizer=lambda x: x.split('|'))
+#     tfidf_matrix = vectorizer.fit_transform(filtered_df['combined_m'])
+
+#     return tfidf_matrix
+
+def item_tf_idf(df): #(9737, 9737) 결측치 없음
+    df['combined'] = (df['tag'].fillna('') + df['genres'].fillna('')).astype(str)
+    df = df.groupby('movieId')['combined'].apply(lambda x: '|'.join(set(x))).reset_index(name='combined_m')
+    vectorizer = TfidfVectorizer(tokenizer=lambda x: x.split('|'))
+    tfidf_matrix = vectorizer.fit_transform(df['combined_m'])
+
+    return tfidf_matrix
