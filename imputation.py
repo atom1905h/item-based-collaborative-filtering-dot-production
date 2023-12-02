@@ -21,28 +21,28 @@ def fill_mean_2(matrix):
 
 def fill_median_1(matrix):
     for col in matrix.index:
-        value = matrix.loc[col].meadian()
+        value = matrix.loc[col].median()
         matrix.loc[col] = matrix.loc[col].fillna(value)
 
     return matrix
 
 def fill_median_2(matrix):
     for col in matrix.columns:
-        value = matrix[col].meadian()
+        value = matrix[col].median()
         matrix[col] = matrix[col].fillna(value)
 
     return matrix
 
 def fill_mode_1(matrix):
     for col in matrix.index:
-        value = matrix.loc[col].mode()
+        value = matrix.loc[col].mode()[0]
         matrix.loc[col] = matrix.loc[col].fillna(value)
 
     return matrix
 
 def fill_mode_2(matrix):
     for col in matrix.columns:
-        value = matrix[col].mode()
+        value = matrix[col].mode()[0]
         matrix[col] = matrix[col].fillna(value)
 
     return matrix
