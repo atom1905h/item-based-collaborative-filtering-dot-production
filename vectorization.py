@@ -1,5 +1,7 @@
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.cluster import KMeans, DBSCAN
 
 def item_rating(df):
     movie_rating = df.pivot_table(values='rating', index='movieId', columns='userId')
@@ -56,16 +58,6 @@ def item_tf_idf_sum(df): # 결측치 있음
 
     return movie_tf_idf
 
-# def item_tf_idf_ratings(df, ratings):#(9717, 9717) 
-#     unique_movieids = ratings['movieId'].unique()
-#     df['combined'] = (df['tag'].fillna('') + df['genres'].fillna('')).astype(str)
-#     filtered_df = df[df['movieId'].isin(unique_movieids)]
-#     filtered_df = filtered_df.groupby('movieId')['combined'].apply(lambda x: '|'.join(set(x))).reset_index(name='combined_m')
-#     vectorizer = TfidfVectorizer(tokenizer=lambda x: x.split('|'))
-#     tfidf_matrix = vectorizer.fit_transform(filtered_df['combined_m'])
-
-#     return tfidf_matrix
-
 def item_tf_idf(df): #(9737, 9737) 결측치 없음
     df['combined'] = (df['tag'].fillna('') + df['genres'].fillna('')).astype(str)
     df = df.groupby('movieId')['combined'].apply(lambda x: '|'.join(set(x))).reset_index(name='combined_m')
@@ -73,3 +65,29 @@ def item_tf_idf(df): #(9737, 9737) 결측치 없음
     tfidf_matrix = vectorizer.fit_transform(df['combined_m'])
 
     return tfidf_matrix
+
+def item_cluster_knn(df):
+    df['time_difference_seconds'] = (pd.to_datetime(df['timestamp'], unit='s', utc=True) - pd.to_datetime(df['year'], format='%Y', utc=True)).dt.total_seconds()
+    user_avg_ratings = df.groupby('userId')['rating'].mean()
+    df['rating_diff_user_avg'] = df['rating'] - df['userId'].map(user_avg_ratings)
+    scaler = MinMaxScaler()
+    df_X = df[['rating','time_difference_seconds','rating_diff_user_avg']]
+    df_X = df_X.fillna(df_X.mean())
+    data_scale = scaler.fit_transform(df_X)
+    model = KMeans(n_clusters = 7, random_state = 10)
+    df['cluster'] = model.fit_predict(data_scale)
+    movie_user_cluster = df.pivot_table(values='cluster', index='movieId', columns='userId')
+
+    return movie_user_cluster
+
+def item_cluster_dbscan(df):
+    df['time_difference_seconds'] = (pd.to_datetime(df['timestamp'], unit='s', utc=True) - pd.to_datetime(df['year'], format='%Y', utc=True)).dt.total_seconds()
+    user_avg_ratings = df.groupby('userId')['rating'].mean()
+    df['rating_diff_user_avg'] = df['rating'] - df['userId'].map(user_avg_ratings)
+    df_X = df[['rating','time_difference_seconds','rating_diff_user_avg']]
+    df_X = df_X.fillna(df_X.mean())
+    model = DBSCAN(n_clusters = 7, random_state = 10)
+    df['cluster'] = model.fit_predict(df_X)
+    movie_user_cluster = df.pivot_table(values='cluster', index='movieId', columns='userId')
+
+    return movie_user_cluster
