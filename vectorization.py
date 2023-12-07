@@ -2,6 +2,9 @@ import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.cluster import KMeans, DBSCAN
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.model_selection import GridSearchCV
 
 def item_rating(df):
     movie_rating = df.pivot_table(values='rating', index='movieId', columns='userId')
@@ -86,8 +89,39 @@ def item_cluster_dbscan(df):
     df['rating_diff_user_avg'] = df['rating'] - df['userId'].map(user_avg_ratings)
     df_X = df[['rating','time_difference_seconds','rating_diff_user_avg']]
     df_X = df_X.fillna(df_X.mean())
-    model = DBSCAN(n_clusters = 7, random_state = 10)
+    model = DBSCAN(eps=0.3,min_samples=6)
     df['cluster'] = model.fit_predict(df_X)
     movie_user_cluster = df.pivot_table(values='cluster', index='movieId', columns='userId')
 
     return movie_user_cluster
+
+def item_tree_combine_feature(df):
+    df['time_difference_seconds'] = (pd.to_datetime(df['timestamp'], unit='s', utc=True) - pd.to_datetime(df['year'], format='%Y', utc=True)).dt.total_seconds()
+    user_avg_ratings = df.groupby('userId')['rating'].mean()
+    df['rating_diff_user_avg'] = df['rating'] - df['userId'].map(user_avg_ratings)
+    df['combined'] = (df['tag'].fillna('') + df['genres'].fillna('')).astype(str)
+    vectorizer = TfidfVectorizer(tokenizer=lambda x: x.split('|'))
+    tfidf_matrix = vectorizer.fit_transform(df['combined'])
+    df_tfidf = pd.DataFrame(tfidf_matrix.toarray(), columns=vectorizer.get_feature_names_out(), index=[i for i in df.index])
+    df_tree = pd.concat([df[['rating','movieId','userId','time_difference_seconds','rating_diff_user_avg']],df_tfidf], axis=1)
+    df_tree = df_tree.dropna()
+    X_train, X_test, y_train, y_test = train_test_split(df_tree[df_tree.columns[1:]], df_tree['rating'], test_size=0.3, random_state=0)
+    param_grid = {"max_depth": [3, 5, 7, None]}
+    tree_model = GridSearchCV(
+        DecisionTreeRegressor(random_state=0),
+        cv=5,
+        scoring="neg_mean_squared_error",
+        param_grid=param_grid,
+    )
+    feature = X_train.columns[2:]
+    tree_model.fit(X_train[feature], y_train)
+    X_train["new_feat"] = tree_model.predict(X_train[feature])
+    X_test["new_feat"] = tree_model.predict(X_test[feature])
+    a = pd.DataFrame(X_train['new_feat'])
+    b = pd.DataFrame(X_test['new_feat'])
+    c = pd.concat([a,b],axis=0)
+    c = c.sort_index(ascending=True)
+    df_tree['new_feat'] = c
+    movie_user_tree = df_tree.pivot_table(values='new_feat', index='movieId', columns='userId')
+
+    return movie_user_tree
