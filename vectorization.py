@@ -66,7 +66,7 @@ def item_tf_idf(df): #(9737, 9737) 결측치 없음
 
     return tfidf_matrix
 
-def item_cluster_knn(df):
+def item_cluster_kmean(df):
     df['time_difference_seconds'] = (pd.to_datetime(df['timestamp'], unit='s', utc=True) - pd.to_datetime(df['year'], format='%Y', utc=True)).dt.total_seconds()
     user_avg_ratings = df.groupby('userId')['rating'].mean()
     df['rating_diff_user_avg'] = df['rating'] - df['userId'].map(user_avg_ratings)
