@@ -1,7 +1,7 @@
 from argparse import ArgumentParser
 from imputation import fill_zero, fill_mean_1, fill_mean_2, fill_knn, fill_median_1, fill_median_2, fill_mode_1, fill_mode_2
 from similarity import to_dataframe, cosine_sim, euclidean_sim, jaccard_sim, pearson_sim, manhattan_sim, msd_similarity_matrix_parallel, pss
-from vectorization import item_rating, item_difference_release_rating, item_rating_average_deviation, item_rating_or_not, item_rating_tag_or_not, item_tag_or_not, item_tags_count, item_tf_idf, item_tf_idf_sum, item_cluster_kmean, item_cluster_dbscan
+from vectorization import item_rating, item_difference_release_rating, item_rating_average_deviation, item_rating_or_not, item_rating_tag_or_not, item_tag_or_not, item_tags_count, item_tf_idf, item_tf_idf_sum, item_cluster_kmean, item_cluster_dbscan, item_tree_combine_feature
 from predict import predict_user_unrated_ratings, predict_user_rated_ratings
 from weight import weight_df
 import pandas as pd
@@ -48,10 +48,12 @@ def recommend(vectorization, imputation, weight, similarity, user_id):
         vector = item_tf_idf_sum(df)
     elif vectorization=='item_tf_idf':
         vector = item_tf_idf(df)
-    elif vectorization=='item_cluster_knn':
+    elif vectorization=='item_cluster_kmean':
         vector = item_cluster_kmean(df)
     elif vectorization=='item_cluster_dbscan':
         vector = item_cluster_dbscan(df)
+    elif vectorization=='item_tree':
+        vector = item_tree_combine_feature(df)
 
     if imputation=='fill_zero':
         vector1 = fill_zero(vector)
