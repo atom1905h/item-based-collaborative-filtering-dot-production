@@ -1,8 +1,9 @@
 from argparse import ArgumentParser
 from imputation import fill_zero, fill_mean_1, fill_mean_2, fill_knn, fill_median_1, fill_median_2, fill_mode_1, fill_mode_2
 from similarity import to_dataframe, cosine_sim, euclidean_sim, jaccard_sim, pearson_sim, manhattan_sim, msd_similarity_matrix_parallel, pss
-from vectorization import item_rating, item_difference_release_rating, item_rating_average_deviation, item_rating_or_not, item_rating_tag_or_not, item_tag_or_not, item_tags_count, item_tf_idf, item_tf_idf_sum
+from vectorization import item_rating, item_difference_release_rating, item_rating_average_deviation, item_rating_or_not, item_rating_tag_or_not, item_tag_or_not, item_tags_count, item_tf_idf, item_tf_idf_sum, item_cluster_kmean, item_cluster_dbscan
 from predict import predict_user_unrated_ratings, predict_user_rated_ratings
+from weight import weight_df
 import pandas as pd
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 import numpy as np
@@ -13,11 +14,12 @@ def parse_args():
     parser.add_argument('--imputation',type=str,default='fill_zero')
     parser.add_argument('--similarity', type=str, default='cosine')
     parser.add_argument('--user_id', type=int, default=1)
+    parser.add_argument('--weight', type=str, default='False')
     args = parser.parse_args()
 
     return args
 
-def recommend(vectorization, imputation, similarity, user_id):
+def recommend(vectorization, imputation, weight, similarity, user_id):
     ratings = pd.read_csv('data/ratings_v1.csv')
     movies = pd.read_csv('data/movies_v1.csv')
     tags = pd.read_csv('data/tags.csv')
@@ -46,6 +48,10 @@ def recommend(vectorization, imputation, similarity, user_id):
         vector = item_tf_idf_sum(df)
     elif vectorization=='item_tf_idf':
         vector = item_tf_idf(df)
+    elif vectorization=='item_cluster_knn':
+        vector = item_cluster_kmean(df)
+    elif vectorization=='item_cluster_dbscan':
+        vector = item_cluster_dbscan(df)
 
     if imputation=='fill_zero':
         vector1 = fill_zero(vector)
@@ -66,6 +72,13 @@ def recommend(vectorization, imputation, similarity, user_id):
     elif imputation=='no':
         vector1 = vector
 
+    if weight=='True':
+        w_df = weight_df(df)
+        filtered_weight = w_df[w_df['movieId'].isin(user_ratings.index)]
+        vector1 = vector1.multiply(filtered_weight['steam_rating'].tolist(), axis=0)
+    elif weight=='False':
+        vector1=vector1
+        
     if similarity=='cosine':
          matrix = cosine_sim(vector1)
     elif similarity=='euclidean':
@@ -108,7 +121,11 @@ def recommend(vectorization, imputation, similarity, user_id):
     mae = mean_absolute_error(y_true=true_y, y_pred=pred_y)
     mse = mean_squared_error(y_true=true_y, y_pred=pred_y)
     rmse = np.sqrt(mse)
-    name = vectorization+"_"+imputation+"_"+ similarity
+
+    if weight=='True':
+        name = vectorization+"_"+imputation+"_"+ similarity+"_w"
+    else:
+        name = vectorization+"_"+imputation+"_"+ similarity
 
     result_metric = pd.read_csv('result/result.csv')
     new_result_metric = pd.DataFrame(data=[[name, mae, mse, rmse]], columns=['name','mae','mse','rmse'])
@@ -126,13 +143,6 @@ def recommend(vectorization, imputation, similarity, user_id):
     #     recommended_movies_df = recommended_movies_df.append(top_5_movies)
 
     # recommended_movies_df.to_csv(f'result/{name}.csv',index=False)
-
-    # predicted_unrated_ratings = predict_user_unrated_ratings(user_id, user_ratings=user_ratings, item_similarity=similarity_matrix)
-    # predicted_ratings_sorted = predicted_unrated_ratings.sort_values(by='predicted_rating', ascending=False)
-    # top_10=predicted_ratings_sorted.head(10)['movieId'].tolist()
-    # top_10_movies = movies[movies['movieId'].isin(top_10)]
-
-    # print(top_10_movies['title'])
 
 def main(args):
     recommend(**args.__dict__)
