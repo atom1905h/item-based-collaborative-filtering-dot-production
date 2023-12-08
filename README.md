@@ -55,7 +55,7 @@
 - Pearson 상관계수
 - Mean Squared Difference (MSD)
 - JMSD (Jaccard를 이용한 MSD)
-- PSS (Pseudo Similarity Score)
+- PSS (Proximity Significance Singularity)
 - JPSS (Jaccard를 이용한 PSS)
 
 ## 5. Dot Product를 통한 평점 예측(predict.py)
@@ -74,9 +74,12 @@
 - 영화의 인기도 (Steam Rating, User Rating 등)를 고려하여 추천
 
 ## 7. 사용법
+### 7.1 parser
+  - --vecorization : 벡터화 함수 이름
+  - --imputation : 결측치 대치 함수 이름
+  - --similarity : 유사도 함수 이름
+  - --weight : 가중치 적용 여부
+  - --weight : 가중치 적용 요소
+### 7.2 example
+  - python main.py --vectorization item_rating --imputation fill_median_1 --similarity jaccard --weight True --weight_sd steam_rating
 
-
-
-1. 데이터 전처리 스크립트 실행
-2. 벡터화 및 모델 학습 스크립트 실행
-3. 평가 및 추천 스크립트 실행
