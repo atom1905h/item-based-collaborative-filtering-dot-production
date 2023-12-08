@@ -81,5 +81,7 @@
   - --weight : 가중치 적용 여부
   - --weight : 가중치 적용 요소
 ### 7.2 example
-  - python main.py --vectorization item_rating --imputation fill_median_1 --similarity jaccard --weight True --weight_sd steam_rating
+  ```sh
+python main.py --vectorization item_rating --imputation fill_median_1 --similarity jaccard --weight True --weight_sd steam_rating
+```
 
