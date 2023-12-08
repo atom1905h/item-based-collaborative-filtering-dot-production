@@ -15,11 +15,12 @@ def parse_args():
     parser.add_argument('--similarity', type=str, default='cosine')
     parser.add_argument('--user_id', type=int, default=1)
     parser.add_argument('--weight', type=str, default='False')
+    parser.add_argument('--weight_sd', type=str, default='num_user')
     args = parser.parse_args()
 
     return args
 
-def recommend(vectorization, imputation, weight, similarity, user_id):
+def recommend(vectorization, imputation, similarity, weight, weight_sd, user_id):
     ratings = pd.read_csv('data/ratings_v1.csv')
     movies = pd.read_csv('data/movies_v1.csv')
     tags = pd.read_csv('data/tags.csv')
@@ -73,13 +74,6 @@ def recommend(vectorization, imputation, weight, similarity, user_id):
         vector1 = fill_mode_2(vector)
     elif imputation=='no':
         vector1 = vector
-
-    if weight=='True':
-        w_df = weight_df(df)
-        filtered_weight = w_df[w_df['movieId'].isin(user_ratings.index)]
-        vector1 = vector1.multiply(filtered_weight['steam_rating'].tolist(), axis=0)
-    elif weight=='False':
-        vector1=vector1
         
     if similarity=='cosine':
          matrix = cosine_sim(vector1)
@@ -114,6 +108,13 @@ def recommend(vectorization, imputation, weight, similarity, user_id):
     result = predict_user_rated_ratings(user_list[0], user_ratings=user_ratings, item_similarity=similarity_matrix)
     for i in user_list[1:]:
         predicted_ratings = predict_user_rated_ratings(i, user_ratings=user_ratings, item_similarity=similarity_matrix)
+        if weight=='True':
+            w = weight_df(df)
+            predicted_ratings = pd.merge(predicted_ratings, w, on='movieId', how='left')
+            if weight_sd=='num_user':
+                predicted_ratings['predicted_rating'] = predicted_ratings['predicted_rating']*0.8 + predicted_ratings['normalized_user_count']*0.2
+            elif weight_sd=='steam_rating':
+                predicted_ratings['predicted_rating'] = predicted_ratings['predicted_rating']*0.8 + predicted_ratings['steam_rating']*0.2
         result= pd.concat([result, predicted_ratings],axis=0)
 
     result2=pd.merge(df, result, on=['userId','movieId'],how='left')
@@ -123,9 +124,9 @@ def recommend(vectorization, imputation, weight, similarity, user_id):
     mae = mean_absolute_error(y_true=true_y, y_pred=pred_y)
     mse = mean_squared_error(y_true=true_y, y_pred=pred_y)
     rmse = np.sqrt(mse)
-
+    
     if weight=='True':
-        name = vectorization+"_"+imputation+"_"+ similarity+"_w"
+        name = vectorization+"_"+imputation+"_"+ similarity+"_"+weight_sd
     else:
         name = vectorization+"_"+imputation+"_"+ similarity
 
@@ -134,16 +135,22 @@ def recommend(vectorization, imputation, weight, similarity, user_id):
     result_metric = result_metric.append(new_result_metric)
     result_metric.to_csv('result/result.csv', index=False)
 
-
-    # recommended_movies_df = pd.DataFrame(columns=['userId', 'movieId', 'title','genres','year'])
+    recommended_movies_df = pd.DataFrame(columns=['userId', 'movieId', 'title','genres','year'])
     # for j in user_list:
     #     predicted_unrated_ratings = predict_user_unrated_ratings(j, user_ratings=user_ratings, item_similarity=similarity_matrix)
+    #     if weight=='True':
+    #         w = weight_df(df)
+    #         predicted_unrated_ratings = pd.merge(predicted_unrated_ratings, w, on='movieId', how='left')
+    #         if weight_sd=='num_user':
+    #             predicted_unrated_ratings['predicted_rating'] = predicted_unrated_ratings['predicted_rating']*0.8 + predicted_unrated_ratings['normalized_user_count']*0.2
+    #         elif weight_sd=='steam_rating':
+    #             predicted_unrated_ratings['predicted_rating'] = predicted_unrated_ratings['predicted_rating']*0.8 + predicted_unrated_ratings['steam_rating']*0.2
     #     predicted_ratings_sorted = predicted_unrated_ratings.sort_values(by='predicted_rating', ascending=False)
     #     top_5=predicted_ratings_sorted.head(5)['movieId'].tolist()
     #     top_5_movies = movies[movies['movieId'].isin(top_5)][['movieId', 'title','genres','year']]
     #     top_5_movies['userId'] = j
     #     recommended_movies_df = recommended_movies_df.append(top_5_movies)
-
+    
     # recommended_movies_df.to_csv(f'result/{name}.csv',index=False)
 
 def main(args):
