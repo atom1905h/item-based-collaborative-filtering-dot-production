@@ -79,7 +79,7 @@
   - --imputation : 결측치 대치 함수 이름
   - --similarity : 유사도 함수 이름
   - --weight : 가중치 적용 여부
-  - --weight : 가중치 적용 요소
+  - --weight_sd : 가중치 적용 요소
 ### 7.2 example
   ```sh
 python main.py --vectorization item_rating --imputation fill_median_1 --similarity jaccard --weight True --weight_sd steam_rating
