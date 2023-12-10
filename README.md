@@ -71,7 +71,7 @@
 
 ### 6.2 인기도 고려 추천
 
-- 영화의 인기도 (Steam Rating, User Rating 등)를 고려하여 추천
+- 영화의 인기도 (Steam Rating, num users 등)를 고려하여 추천
 
 ## 7. 사용법
 ### 7.1 parser
